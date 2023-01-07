@@ -1,0 +1,183 @@
+﻿date(28/12/2022)
+
+
+Task 1: built the connection between s3 to snowflake And test
+
+
+
+
+  
+
+
+
+Snowpipe:
+   Snowpipe enables loading data from files as soon as they’re available in a stage. This means you can load data from files in micro-batches, making it available to users within minutes, rather than manually executing COPY statements on a schedule to load larger batches.
+How does a snowpipe work?
+Snowpipe loads data from files as soon as they are available in a stage. The data is loaded according to the COPY statement defined in a referenced pipe.
+A pipe is a named, first-class Snowflake object that contains a COPY statement used by Snowpipe. The COPY statement identifies the source location of the data files (i.e., a stage) and a target table. All data types are supported, including semi-structured data types such as JSON and Avro
+Task 1: built the connection between s3 to snowflake And test
+
+
+Workflow:
+
+
+* Create AWS role and policy to configure S3 with snowflake for security purpose
+* Create s3 bucket and link with snowflake
+* Create snowpipe in snowflake along with file format,stage,storage integration 
+* And testing
+
+
+
+
+
+
+Procedure:
+
+
+* Login into root user account of aws
+* Created role and given AmazonS3FullAccess to role
+Point 3. For role used "AWS" current account id and external id =0000
+* For  storage_AWS_ROLE_ARN in storage integration copied role ARN from aws: 
+* For Storage_allowed_locations copied url of bucket:
+* Then using desc integration s3_cust ; command 
+* Selected STORAGE_AWS_EXTERNAL_ID  and STORAGE_AWS_ROLE_ARN 
+And pasted that into point 3 in trusted policy option
+
+
+* All above process we have to do once to configure aws with snowflake
+
+
+
+
+* --Create FILE FORMAT
+* --create s3 external stage(in that URL section we have to add folders URL of bucket in which we are going to add files)
+–Create snowpipe
+Then for create notification in aws:
+* In snowflake desc pipe <pipe name>; then select arn which will be in notification channel after executing above pipe
+Then paste that link to notification arn in aws  
+
+
+* For all tables we require only one storage integration and role and policy
+* But we will require different external stage,sometimes format if changes and
+* Different pipe and notification in aws
+* Using alter pipe <pipe name> u can check data is loaded or not
+
+
+
+
+
+
+
+
+Status : 
+Completed the above task successfully. Final data loading is pending.
+
+
+
+
+
+
+
+
+Date 2 Jan 2022
+
+
+Task 2: Add Streams and task implementation to capture CDC and scheduling
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+Streams:
+
+
+        A Stream is a Snowflake object that provides Change Data Capture (CDC) capabilities to track the changes made to tables including inserts, updates, and deletes, as well as metadata about each change, so that actions can be taken using the changed data. 
+
+
+
+
+Tasks:
+
+
+A task can execute any one of the following types of SQL code:
+* Single SQL statement
+* Call to a stored procedure
+Tasks can be combined with table streams for continuous ELT workflows to process recently changed table rows. Streams ensure exactly once semantics for new or changed data in a table.
+Tasks can also be used independently to generate periodic reports by inserting or merging rows into a report table or performing other periodic work.
+
+
+process:
+
+
+* Create 3 streams for 3 different tables in landing to capture incremental data
+* When data is added it will stored in stream
+* Then created task in curated zone with that streams to add data in curated zone
+To capture this data loaded in curated zone created another stream
+In curated zone
+* Created task in such way it will load after every one minute from landing zone streams to curated zone
+
+
+
+
+Status:
+
+
+
+
+        Completed stream and task for two zones .Next part is to create task in consumption zone from streams in curated zone 
+
+
+
+
+
+
+
+
+
+
+Date:  6 jan 2022
+
+
+Task 3: Built another script which help to move s3 file to archive folder
+
+
+* Created script for move file from one to another folder in s3 bucket using boto3
+* syntax:
+
+
+* First you have to add aws access and secret key in that code
+* In key you have to add whole path of the file in bucket
+        
+ 'Bucket': 'your_source_bucket_name',
+    'Key': 'Object_Key_with_file_extension'
+ 
+  
+* If you want to do for multiple files in same folder 
+You have to just copy and delete syntax again and again
+      
+* Created two folder in AWS first for current data which is live data
+* And another one is for archived data that we have taken from live data folder
+
+
+
+
+
+
+Status:
+   
+ Created script for above task. Next target is to automate the extraction process using airflow.
