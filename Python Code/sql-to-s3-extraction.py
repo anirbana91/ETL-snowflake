@@ -8,7 +8,7 @@ import boto3
 import os
 import pyodbc
 # Get API Keys
-content = open('cinfig.json')
+content = open('config.json')
 config = json.load(content)
 access_key = config['access_key']
 secret_access_key = config['secret_access_key']
