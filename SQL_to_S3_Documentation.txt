@@ -1,4 +1,55 @@
-- Built a connection from SQL SERVER to AWS S3 Bucket.
+Task  1 
+Migrate files to Amazon S3 Bucket using AWS CLI
+
+-Logged in to my AWS account.
+-Created bucket - om-sql-28122022.
+-Created folder - om-up-files
+-ref:https://hevodata.com/learn/aws-sync/
+-Download AWS Command Line Interface
+-AWS CLI Configuration:
+	-Open CMD 
+	-aws –version
+	-Aws configure 
+	-Enter: AWS access key ID (shared by anirban)
+	-Enter: AWS Secret access key (Shared by Anirban)
+	-Default region name: blank (press enter)
+	-Default output format: blank (press enter)
+	-Now you’ll have full access to AWS account through CLI.
+
+
+Step 2:
+-Keep the files in the local directory which you want to upload in the s3 bucket.
+-AWS CLI Commands:
+	(My local files are in C:Documents/aws test/file_name)
+	Cd documents - enter
+	Cd aws test - enter
+	aws s3 sync . s3://mybucket
+	Aws sync . s3://om-sql-28122022/om-up-files - enter
+-With above commands, all the files from the folder will get pushed inside the bucket location.
+
+--------------------------------------------------------------------------------------------------------
+
+Project Tasks
+Stage 1 - Extraction
+Pushing Data from SQL Server to S3 bucket.
+	
+	Step 1
+	- Getting SQL server details.
+
+	Step 2
+	- Import data from CSV to SQL SERVER 
+	- select tasks > Import flat files > Specify input file > Preview data > Next > Finish.
+	- This way even if you have a date format difference you can still import the data into the SQL server.
+
+	- NOTE: If the date format is different in the CSV file (dd-mm-yy to yy-mm-dd) :
+		-Right-click on the DB.
+		-Note: If you have the date formatted in dd-mm-yy format, the SQL server will throw an error. Fix that using the following steps:
+			-Open the CSV file > Right-click on the top cell of the column (Name of the column cell) > Format Cell > Category: Date > Change the format to yy-mm-dd > Hit Ok > Save the file.
+			-If you don’t follow these steps, your data won’t get successfully added inside the SQL error due to the DataType error.
+
+
+Stage 2 -
+Built a connection from SQL SERVER to AWS S3 Bucket.
 	- To connect SQL to S3:
 	
 	1.We are using a Python Script, which includes:
@@ -6,21 +57,20 @@
 		- S3 bucket details - Access key and Secret Acess key
 		- We have mentioned S3 bucket_name > subfolder_name.
 		- Once we run the script > 
-						it creates a folder inside the bucket >
-			 					 Public/ > 
-									files get saved inside it.
-		- file name: sql-to-s3-extraction
+						it creates a folder inside the bucket > named "Public/" > 
+									 in which data load gets saved in it.
 	
-	2. For incremental Data:
+	2. Move the first load to Archive folder for incremental Data:
 		- We have another Python Script to "Move the first load to Archive folder" from S3 bucket.
 		- Use Case:
 			- After we get the first load of the data from the SQL SERVER,
 		      - We have another folder called "Archive inside the same S3 bucket.
 			- Using second .py script we move previous load to "Archive" Folder.
-			- Now when we get the fresh load, "Public" folder will be empty to store the new records.
-			- Currently it's a manula process but we are automating the process. 
-			- This process will be automated using "AirFlow" (WIP).
+			- Now when we get the fresh load, "Public" folder will be empty to store the new data sets.
+			- Will be using "AirFlow" to automate the process by scheduler.
 
-- Connection from S3 to Snowflake.
+Stage 3
+Connection from S3 to Snowflake.
 	- Using same bucket details in Snowflake to connect.
 	- Through snowpipe we are ingesting data into the Landing Zone.
+
