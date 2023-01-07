@@ -1,0 +1,26 @@
+- Built a connection from SQL SERVER to AWS S3 Bucket.
+	- To connect SQL to S3:
+	
+	1.We are using a Python Script, which includes:
+		- Local SQL server details
+		- S3 bucket details - Access key and Secret Acess key
+		- We have mentioned S3 bucket_name > subfolder_name.
+		- Once we run the script > 
+						it creates a folder inside the bucket >
+			 					 Public/ > 
+									files get saved inside it.
+		- file name: 
+	
+	2. For incremental Data:
+		- We have another Python Script to "Move the first load to Archive folder" from S3 bucket.
+		- Use Case:
+			- After we get the first load of the data from the SQL SERVER,
+		      - We have another folder called "Archive inside the same S3 bucket.
+			- Using second .py script we move previous load to "Archive" Folder.
+			- Now when we get the fresh load, "Public" folder will be empty to store the new records.
+			- Currently it's a manula process but we are automating the process. 
+			- This process will be automated using "AirFlow" (WIP).
+
+- Connection from S3 to Snowflake.
+	- Using same bucket details in Snowflake to connect.
+	- Through snowpipe we are ingesting data into the Landing Zone.
