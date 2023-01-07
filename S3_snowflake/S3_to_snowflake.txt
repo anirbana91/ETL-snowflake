@@ -1,0 +1,110 @@
+--create table customers
+create or replace table customers_csv(
+customer_id	number (38,0),
+cust_name varchar(200),
+city varchar(200),
+grade number(38,0),	
+salesman_id number(38,0)
+  );
+  
+create or replace stream landing_cust_stream on table customers_csv
+append_only = true;
+
+insert into customers_csv values (3011,'jay','Pune',200,5004);
+
+select * from landing_cust_stream;
+
+create or replace storage integration s3_cust  -- for authentication
+Type=External_stage
+Storage_provider='s3'
+enabled=True
+storage_AWS_ROLE_ARN = 'arn:aws:iam::887117308223:role/demo_snowflake'
+Storage_allowed_locations = ('s3://demotransferdatas3/');
+
+
+--create storage integration to coonect s3 with snowflake
+
+
+--to describe integration
+desc integration s3_cust;
+
+
+--Create FILE FORMAT
+CREATE OR REPLACE FILE FORMAT F_cust
+TYPE = CSV ,
+SKIP_HEADER =1;
+
+--create s3 external stage
+create or replace stage s3_stg_customers
+URL='s3://demotransferdatas3/public/customer/'
+Storage_integration=s3_cust
+file_format=F_cust;
+
+show stages;
+
+select * from customers_csv;
+list @s3_stg_customers;
+
+
+
+--create snowpipe for automate data ingestion from s3 to snowflake
+Create OR REPLACE PIPE P_customers
+auto_ingest = true
+AS
+Copy into customers_csv FROM @s3_stg_customers
+file_format=(type=csv compression=none)
+pattern='.*customer.*[.]csv'
+on_error='continue';
+
+--to create event notification
+desc pipe p_customers;
+
+show pipes;
+
+--to check data is loaded 
+alter pipe P_customers refresh;
+
+
+
+
+--create table orders
+create or replace table orders_csv(         
+ord_no	int ,
+purch_amt int ,
+ord_date date ,
+cust_id int ,
+salesman_id int
+);
+
+
+
+--create s3 external stage
+create or replace stage s3_stg_orders
+URL='s3://demotransferdatas3/public/orders/orders.csv'
+Storage_integration=s3_cust
+file_format=F_cust;
+
+show stages;
+
+select * from orders_csv;
+list @s3_stg_orders;
+
+
+--create snowpipe for automate data ingestion from s3
+Create OR REPLACE PIPE P_orders
+auto_ingest = true
+AS
+Copy into orders_csv FROM @s3_stg_orders
+file_format=(type=csv compression=none)
+pattern='.*orders.*[.]csv'
+on_error='continue';
+
+
+desc pipe p_orders;
+
+show pipes;
+
+alter pipe P_orders refresh;
+
+
+
