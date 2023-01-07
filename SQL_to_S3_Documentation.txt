@@ -9,7 +9,7 @@
 						it creates a folder inside the bucket >
 			 					 Public/ > 
 									files get saved inside it.
-		- file name: 
+		- file name: sql-to-s3-extraction
 	
 	2. For incremental Data:
 		- We have another Python Script to "Move the first load to Archive folder" from S3 bucket.
