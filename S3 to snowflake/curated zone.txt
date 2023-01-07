@@ -1,0 +1,173 @@
+create or replace schema curated_zone;
+
+USE SCHEMA curated_zone;
+
+--create transient tables for curated zone
+
+--Customer table
+
+create or replace transient table curated_customers(
+Cust_Pk number autoincrement,
+customer_id	number (38,0),
+cust_name varchar(200),
+city varchar(200),
+grade number(38,0),	
+salesman_id number(38,0)
+);
+
+---MOVING ALL THE DATA FROM LANDING TO CURATED
+
+INSERT INTO landing.curated_zone.curated_customers(
+    customer_id,
+    cust_name,
+    city,
+    grade,
+    salesman_id)
+select
+    customer_id,
+    cust_name,
+    city,
+    grade,
+    salesman_id
+from landing.landing_schema.landing_customers;
+
+truncate table curated_salesman;
+
+--orders table
+
+create or replace transient table curated_orders(   
+Order_Pk number autoincrement,      
+ord_no	number (38,0),
+purch_amt number (38,0),
+customer_id number (38,0),
+salesman_id number(38,0)
+);
+
+
+INSERT INTO landing.curated_zone.curated_orders(
+ord_no,
+purch_amt ,
+customer_id ,
+salesman_id)
+select 
+ord_no,
+purch_amt,
+customer_id ,
+salesman_id
+from landing.landing_schema.ord_stream;
+
+
+--salesman table
+
+create or replace transient table curated_salesman
+(Salesman_Pk number autoincrement,
+name varchar(200),
+city varchar(200),
+comission number(3,2),	
+salesman_id number(38,0)
+);
+
+INSERT INTO landing.curated_zone.curated_salesman(
+name,
+city,
+comission,
+salesman_id)
+select 
+name,
+city,
+comission,
+salesman_id
+from landing.landing_schema.landing_salesman;
+
+show tables;
+
+
+--customer task
+create or replace task cust_task
+warehouse= sqlproject
+schedule= '1 minute'
+as
+INSERT INTO landing.curated_zone.curated_customers(
+    customer_id,
+    cust_name,
+    city,
+    grade,
+    salesman_id)
+select
+    customer_id,
+    cust_name,
+    city,
+    grade,
+    salesman_id
+from landing.landing_schema.cust_stream;
+
+alter task cust_task resume;
+alter task cust_task suspend;
+
+show tasks;
+
+select * from curated_customers;
+
+truncate table curated_customers;
+
+select *
+  from table(task_history);
+  
+  
+--order task
+create or replace task ord_task
+warehouse= sqlproject
+schedule= '1 minute'
+as
+INSERT INTO landing.curated_zone.curated_orders(
+ord_no,
+purch_amt ,
+customer_id ,
+salesman_id)
+select 
+ord_no,
+purch_amt,
+customer_id ,
+salesman_id
+from landing.landing_schema.ord_stream;
+
+alter task ord_task resume;
+alter task ord_task suspend;
+
+select * from curated_orders;
+
+
+--salesman task
+create or replace task sale_task
+warehouse= sqlproject
+schedule= '1 minute'
+as
+INSERT INTO landing.curated_zone.curated_salesman(
+name,
+city,
+comission,
+salesman_id)
+select 
+name,
+city,
+comission,
+salesman_id
+from landing.landing_schema.sale_stream;
+
+alter task sale_task resume;
+alter task sale_task suspend;
+
+select * from curated_salesman;
+show tasks;
+
+CREATE OR REPLACE STREAM cust1_STREAM ON TABLE curated_customers;
+
+CREATE OR REPLACE STREAM ord1_STREAM ON TABLE curated_orders;
+CREATE OR REPLACE STREAM sale1_STREAM ON TABLE curated_salesman;
+
+select * from cust1_stream;
+select * from ord1_stream;
+select * from sale1_stream;
+
+select * from curated_customers;
+select * from curated_salesman;

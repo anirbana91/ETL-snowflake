@@ -1,0 +1,143 @@
+create database landing;
+create schema landing_schema;
+
+create or replace transient table landing_customers(
+customer_id	varchar,
+cust_name varchar,
+city varchar,
+grade varchar,	
+salesman_id varchar
+)comment ='this is item table with in landing schema';
+
+
+create or replace storage integration s3_customers  -- for authentication
+Type=External_stage
+Storage_provider='s3'
+enabled=True
+storage_AWS_ROLE_ARN = 'arn:aws:iam::118949878232:role/snowflake_int'
+Storage_allowed_locations = ('s3://etl-snfk1/delta/');
+
+desc integration s3_customers ;
+
+CREATE OR REPLACE FILE FORMAT F_customers
+TYPE = CSV ,
+SKIP_HEADER =1;
+
+
+create or replace stage s3_stg_customers
+URL='s3://etl-snfk1/delta/customers/'
+Storage_integration=s3_customers;
+
+
+list @s3_stg_customers;
+
+Create OR REPLACE PIPE P_customers
+auto_ingest = true
+AS
+Copy into landing_customers FROM @s3_stg_customers
+file_format=(type=csv compression=none SKIP_HEADER =1)
+pattern='.*customers.*[.]csv'
+on_error='continue';
+
+desc pipe p_customers;
+
+alter pipe P_customers refresh;
+
+select * from landing_customers;
+
+
+select SYSTEM$PIPE_STATUS( 'p_customers' );
+
+
+
+--create table orders
+
+create or replace transient table landing_orders(         
+ord_no	varchar,
+purch_amt varchar,
+customer_id varchar,
+salesman_id varchar
+)comment ='this is item table with in landing schema';
+
+--create s3 external stage
+create or replace stage s3_stg_orders
+URL='s3://etl-snfk1/delta/orders/'
+Storage_integration=s3_customers;
+
+
+--create snowpipe for automate data ingestion from s3
+Create OR REPLACE PIPE P_orders
+auto_ingest = true
+AS
+Copy into landing_orders FROM @s3_stg_orders
+file_format=(type=csv compression=none SKIP_HEADER =1 )
+pattern='.*orders.*[.]csv'
+on_error='continue';
+
+desc pipe p_orders;
+
+show pipes;
+
+alter pipe P_orders refresh;
+
+select * from landing_orders;
+
+truncate table landing_orders;
+
+
+--create salesman table
+
+create or replace transient table landing_salesman
+(   	
+name varchar,
+city varchar,
+comission varchar,	
+salesman_id varchar
+)comment ='this is item table with in landing schema';
+
+
+--create s3 external stage
+create or replace stage s3_stg_salesman
+URL='s3://etl-snfk1/delta/salesmans/'
+Storage_integration=s3_customers;
+
+
+show stages;
+
+select * from landing_salesman;
+
+--create snowpipe for automate data ingestion from s3
+Create OR REPLACE PIPE P_salesman
+auto_ingest = true
+AS
+Copy into landing_salesman FROM @s3_stg_salesman
+file_format=(type=csv compression=none SKIP_HEADER =1)
+pattern='.*salesman.*[.]csv'
+on_error='continue';
+
+
+desc pipe p_salesman;
+
+show pipes;
+
+alter pipe P_salesman refresh;
+
+select * from landing_salesman;
+
+
+
+
+--streams
+CREATE OR REPLACE STREAM cust_STREAM ON TABLE landing_customers;
+
+CREATE OR REPLACE STREAM ord_STREAM ON TABLE landing_orders;
+CREATE OR REPLACE STREAM sale_STREAM ON TABLE landing_salesman;
+
+select * from cust_stream;
+select * from ord_stream;
+select * from sale_stream;
+
+--raw commands
+drop stream ORD_stream;
+truncate table landing_salesman;
+

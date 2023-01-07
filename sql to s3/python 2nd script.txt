@@ -1,0 +1,40 @@
+import boto3
+
+#Creating Session With Boto3.
+session = boto3.Session(
+aws_access_key_id='AKIARXMPXDHMIADLGKNZ',
+aws_secret_access_key='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'
+)
+
+#Creating S3 Resource From the Session.
+s3 = session.resource('s3')
+
+#Create a Soucre Dictionary That Specifies Bucket Name and Key Name of the Object to Be Copied
+copy_source = {
+    'Bucket': 'test-os-ab',
+    'Key': 'livedata/customer_History_data.csv'
+}
+copy_source = {
+    'Bucket': 'test-os-ab',
+    'Key': 'livedata/Item_History_data.csv'
+}
+copy_source = {
+    'Bucket': 'test-os-ab',
+    'Key': 'livedata/order_history_data.csv'
+}
+
+bucket = s3.Bucket('test-os-ab')
+
+bucket.copy(copy_source, 'archive/customer_History_data.csv')
+bucket.copy(copy_source, 'archive/Item_History_data.csv')
+bucket.copy(copy_source, 'archive/order_history_data.csv')
+
+# Printing the Information That the File Is Copied.
+print('All Files are copied')
+
+#to delete copied file from source bucket
+s3.Object('test-os-ab', 'livedata/customer_History_data.csv').delete()
+s3.Object('test-os-ab', 'livedata/Item_History_data.csv').delete()
+s3.Object('test-os-ab', 'livedata/order_history_data.csv').delete()
+
+print('All source Files are deleted after copying')
