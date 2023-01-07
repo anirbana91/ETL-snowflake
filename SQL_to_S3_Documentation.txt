@@ -43,9 +43,10 @@ Pushing Data from SQL Server to S3 bucket.
 
 	- NOTE: If the date format is different in the CSV file (dd-mm-yy to yy-mm-dd) :
 		-Right-click on the DB.
-		-Note: If you have the date formatted in dd-mm-yy format, the SQL server will throw an error. Fix that using the following steps:
-			-Open the CSV file > Right-click on the top cell of the column (Name of the column cell) > Format Cell > Category: Date > Change the format to yy-mm-dd > Hit Ok > Save the file.
-			-If you don’t follow these steps, your data won’t get successfully added inside the SQL error due to the DataType error.
+		-Note:
+		 If you have the date formatted in dd-mm-yy format, the SQL server will throw an error. Fix that using the following steps:
+		 -Open the CSV file > Right-click on the top cell of the column (Name of the column cell) > Format Cell > Category: Date > Change the format to yy-mm-dd > Hit Ok > Save the file.
+		 -If you don’t follow these steps, your data won’t get successfully added inside the SQL error due to the DataType error.
 
 
 Stage 2 -
@@ -56,9 +57,8 @@ Built a connection from SQL SERVER to AWS S3 Bucket.
 		- Local SQL server details
 		- S3 bucket details - Access key and Secret Acess key
 		- We have mentioned S3 bucket_name > subfolder_name.
-		- Once we run the script > 
-						it creates a folder inside the bucket > named "Public/" > 
-									 in which data load gets saved in it.
+		- Once we run the script > it creates a folder inside the bucket > named "Public/" > 
+		  in which data load gets saved in it.
 	
 	2. Move the first load to Archive folder for incremental Data:
 		- We have another Python Script to "Move the first load to Archive folder" from S3 bucket.
