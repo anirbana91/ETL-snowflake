@@ -1,0 +1,70 @@
+from datetime import datetime
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.engine import URL
+import json
+import boto3
+import pandas as pd
+import io
+import pyodbc
+
+#built connection
+conn_str = (
+    r'DRIVER={SQL Server};'
+    r'PORT=1433;'
+    r'SERVER=DESKTOP-5RFU93E;'
+    r'DATABASE=project_oriented;'
+    r'Trusted_Connection=yes;'
+)
+cnxn = pyodbc.connect(conn_str)
+# engine = create_engine(cnxn)
+connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": conn_str})
+
+engine = create_engine(connection_url)
+session = scoped_session(sessionmaker(bind=engine))
+s = session()
+
+#READING .JSON FILE
+f = open('soure.json')
+input_json = json.loads(f.read())
+output = input_json['SRC_FILE'][0]
+# ACCESSING
+for (k, v) in output.items():
+    name = v['NAME']
+    keys = v['KEYS']
+    ts_col = v['TIMESTAMP_COL']
+    BUCKET_NAME = v['BUCKET_NAME']
+    INCR_PATH = v['UPLOAD_FILE_KEY_INCR']
+    HIST_PATH = v['UPLOAD_FILE_KEY_HIST']
+    filename_INCR = INCR_PATH + name + ".csv"
+    filename_HIST = HIST_PATH + name +" "+ str(datetime.now()) + ".csv"
+
+    fetch_latest_record = "select * from {} where {} = (select max({}) from {} )".format(name, ts_col, ts_col, name)
+    #SELECT * FROM {} WHERE CONVERT(VARCHAR(10), {}, 111) = (SELECT MAX(CONVERT(VARCHAR(10), {}, 111)) FROM {} )
+    print(fetch_latest_record)
+    df = pd.read_sql_query(fetch_latest_record,con=engine)
+    print(df, name)
+    s3_client = boto3.client('s3', aws_access_key_id="AKIARVG456BHT6MV55PY",
+                       aws_secret_access_key="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",
+                        region_name='ap-south-1')
+    with io.StringIO() as csv_buffer:
+        # loading incr bucket
+        df.to_csv(csv_buffer, index=False)
+        response = s3_client.put_object(Bucket=BUCKET_NAME, Key=filename_INCR, Body=csv_buffer.getvalue())
+        status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+        if status == 200:
+            print(f"Successful S3 put_object response. Status - {status}")
+        else:
+            print(f"Unsuccessful S3 put_object response. Status - {status}")
+        print("Data Imported Successful")
+
+        # loading historical bucket
+        df.to_csv(csv_buffer, index=False, mode='append')
+        response = s3_client.put_object(Bucket=BUCKET_NAME, Key=filename_HIST, Body=csv_buffer.getvalue())
+        status = response.get("ResponseMetadata", {}).get("HTTPStatusCode")
+        if status == 200:
+           print(f"Successful S3 put_object response. Status - {status}")
+
+        else:
+             print(f"Unsuccessful S3 put_object response. Status - {status}")
+        print("Data Imported Successful")
