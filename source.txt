@@ -1,0 +1,30 @@
+"SRC_FILE":[{
+
+    "TABLE_1":{
+       "NAME":"customer",
+       "KEYS":"customer_id",
+       "TIMESTAMP_COL":"date time",
+       "BUCKET_NAME": "gauri-malad",
+       "UPLOAD_FILE_KEY_INCR" : "Tanu/customers/INCR/",
+       "UPLOAD_FILE_KEY_HIST" : "Tanu/customers/HIST/"
+
+    },
+    "TABLE_2":{
+        "NAME":"salesman",
+        "KEYS":"salesman_id",
+        "TIMESTAMP_COL":"date time",
+        "BUCKET_NAME": "gauri-malad",
+        "UPLOAD_FILE_KEY_INCR" : "Tanu/salesman/INCR/",
+        "UPLOAD_FILE_KEY_HIST" : "Tanu/salesman/HIST/"
+    },
+    "TABLE_3":{
+        "NAME":"orders",
+        "KEYS":"ord_id",
+        "TIMESTAMP_COL":"date time",
+        "BUCKET_NAME": "gauri-malad",
+        "UPLOAD_FILE_KEY_INCR" : "Tanu/orders/INCR/",
+        "UPLOAD_FILE_KEY_HIST" : "Tanu/orders/HIST/"
+    }
+
+}]
+}
