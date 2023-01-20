@@ -44,8 +44,8 @@ for (k, v) in output.items():
     print(fetch_latest_record)
     df = pd.read_sql_query(fetch_latest_record,con=engine)
     print(df, name)
-    s3_client = boto3.client('s3', aws_access_key_id="AKIARVG456BHT6MV55PY",
-                       aws_secret_access_key="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",
+    s3_client = boto3.client('s3', aws_access_key_id="***************",
+                       aws_secret_access_key="*************************",
                         region_name='ap-south-1')
     with io.StringIO() as csv_buffer:
         # loading incr bucket
