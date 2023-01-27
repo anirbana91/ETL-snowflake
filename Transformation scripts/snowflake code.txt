@@ -1,0 +1,363 @@
+--to connect snowflake with aws s3 bucket
+create or replace storage integration s3_etl  -- for authentication
+Type=External_stage
+Storage_provider='s3'
+enabled=True
+storage_AWS_ROLE_ARN = 'arn:aws:iam::118949878232:role/snowflakeuser'
+Storage_allowed_locations = ('s3://etl-final/');
+
+desc integration s3_etl;
+
+--source
+create or replace transient table incr_customer(
+customer_id	varchar,
+cust_name varchar,
+city varchar,
+grade varchar,	
+salesman_id varchar,
+cust_date varchar
+)
+comment ='this table is for incremental data(source)',
+          'with merge it will go to hist_customer(target)';
+          
+select * from incr_customer;
+
+
+--target
+create or replace table hist_customer(
+customer_id	varchar,
+cust_name varchar,
+city varchar,
+grade varchar,	
+salesman_id varchar,
+cust_date varchar
+)
+comment ='this table is for historical data'
+            'data from this table will go to curated zone';
+
+select * from hist_customer;
+
+
+--procedure
+create or replace procedure spr_customer()
+returns varchar
+language sql
+as
+$$
+begin
+  MERGE INTO hist_customer as T
+  USING incr_customer as S
+  ON T.customer_id= S.customer_id 
+  WHEN MATCHED THEN 
+      UPDATE SET 
+      t.cust_name = s.cust_name,
+      t.city = s.city,
+      t.grade = s.grade,
+      t.salesman_id = s.salesman_id,
+       t.cust_date = s.cust_date
+  WHEN NOT MATCHED THEN 
+      INSERT (customer_id,
+              cust_name ,
+              city,
+              grade,	
+              salesman_id,
+             cust_date)
+      values(s.customer_id,
+             s.cust_name ,
+             s.city,
+             s.grade,	
+             s.salesman_id,
+            current_timestamp());
+            
+truncate table incr_customer;
+
+end;
+$$;
+
+
+--task
+CREATE TASK T_cust
+  WAREHOUSE = ETL_project
+  SCHEDULE = 'USING CRON 30 20 * * *  Asia/Kolkata'
+  TIMESTAMP_INPUT_FORMAT = 'YYYY-MM-DD HH24'
+as
+call spr_customer()
+
+show tasks;
+
+
+--to capture changes (insert and update in hist table)
+alter table hist_customer set change_tracking = true;
+ set hc1 = (select current_timestamp());
+
+--to check which data inserted or updated
+select *
+ from hist_customer
+   changes(information => default)
+   at(timestamp => $hc1);
+
+
+
+
+--external stage for first load
+create or replace stage s3_stg_customer
+URl='s3://etl-final/Extracted/customer/customer.csv'  
+storage_integration=s3_etl
+FILE_FORMAT=F_csv_etl;
+
+copy into incr_customer from @s3_stg_customer;
+
+
+--for pipe(incremental load)
+create or replace stage s3_stg_customer
+URl='s3://etl-final/Extracted/customer/INCR/'  
+storage_integration=s3_etl
+;
+
+
+list @s3_stg_customer;
+
+
+CREATE OR REPLACE FILE FORMAT F_csv_etl
+TYPE = CSV ,
+SKIP_HEADER =1;
+
+
+Create OR REPLACE PIPE SP_customer
+auto_ingest = true
+AS
+Copy into incr_customer FROM @s3_stg_customer
+file_format=(type=csv compression=none SKIP_HEADER =1)
+pattern='.*customer.*[.]csv'
+on_error='continue';
+
+desc pipe sp_customer;
+
+alter pipe SP_customer refresh;
+
+
+
+
+
+
+--orders
+create or replace transient table incr_orders(
+ord_no	varchar,
+purch_amt varchar,
+ord_date varchar,
+customer_id varchar,
+salesman_id varchar,
+order_date varchar
+);
+comment ='this table is for incremental data(source)',
+          'with merge it will go to hist_orders(target)';
+          
+select * from incr_orders;
+
+
+--target
+create or replace table hist_orders(
+ord_no	varchar,
+purch_amt varchar,
+ord_date varchar,
+customer_id varchar,
+salesman_id varchar,
+order_date varchar
+);
+comment ='this table is for historical data'
+            'data from this table will go to curated zone';
+
+select * from hist_orders;
+
+
+
+create or replace procedure spr_orders()
+returns varchar
+language sql
+as
+$$
+begin
+
+  MERGE INTO hist_orders as T
+  USING incr_orders as S
+  ON T.ord_no= S.ord_no
+  WHEN MATCHED THEN 
+      UPDATE SET 
+      t.purch_amt = s.purch_amt,
+      t.ord_date = s.ord_date,
+      t.customer_id = s.customer_id,
+      t.salesman_id = s.salesman_id,
+      t.order_date=s.order_date
+  WHEN NOT MATCHED THEN 
+      INSERT (ord_no,
+              purch_amt,
+              ord_date,
+              customer_id,
+              salesman_id,
+              order_date)
+      values(s.ord_no,
+             s.purch_amt ,
+             s.ord_date,
+             s.customer_id,	
+             s.salesman_id,
+            current_timestamp());
+
+    truncate table incr_orders ;      
+
+end;
+$$;
+
+
+--task
+CREATE TASK T_ord
+  WAREHOUSE = ETL_project
+  SCHEDULE = 'USING CRON 30 20 * * *  India/Mumbai'
+  TIMESTAMP_INPUT_FORMAT = 'YYYY-MM-DD HH24'
+as
+call spr_orders()
+
+--external stage for first load
+create or replace stage s3_stg_orders
+URl='s3://etl-final/Extracted/orders/orders.csv'  
+storage_integration=s3_etl
+FILE_FORMAT=F_csv_etl;
+
+copy into incr_orders from @s3_stg_orders;
+
+
+--for pipe
+create or replace stage s3_stg_orders
+URl='s3://etl-final/Extracted/orders/INCR/'  
+storage_integration=s3_etl
+;
+
+
+list @s3_stg_orders;
+
+
+CREATE OR REPLACE FILE FORMAT F_csv_etl
+TYPE = CSV ,
+SKIP_HEADER =1;
+
+
+Create OR REPLACE PIPE SP_orders
+auto_ingest = true
+AS
+Copy into incr_orders FROM @s3_stg_orders
+file_format=(type=csv compression=none SKIP_HEADER =1)
+pattern='.*orders.*[.]csv'
+on_error='continue';
+
+desc pipe SP_orders;
+
+alter pipe SP_orders refresh;
+
+
+
+--create salesman table
+
+create or replace transient table incr_salesman(
+name varchar,
+city varchar,
+comission varchar,	
+salesman_id varchar,
+sale_date varchar
+);
+comment ='this table is for incremental data(source)',
+          'with merge it will go to hist_customer(target)';
+          
+select * from incr_salesman
+
+
+
+--target
+create or replace table hist_salesman(
+name varchar,
+city varchar,
+comission varchar,	
+salesman_id varchar,
+sale_date varchar
+);
+comment ='this table is for historical data'
+            'data from this table will go to curated zone';
+
+select * from hist_salesman;
+
+
+create or replace procedure spr_salesman()
+returns varchar
+language sql
+as
+$$
+begin
+  MERGE INTO hist_salesman as T
+  USING incr_salesman as S
+  ON T.salesman_id= S.salesman_id
+  WHEN MATCHED THEN 
+      UPDATE SET 
+      t.name = s.name,
+      t.city = s.city,
+      t.comission = s.comission,
+      t.sale_date = s.sale_date
+  WHEN NOT MATCHED THEN 
+      INSERT (name,
+              city,
+              comission,	
+              salesman_id,
+              sale_date)
+      values(s.name,
+             s.city,
+             s.comission,	
+             s.salesman_id,
+            current_timestamp());
+    
+    truncate table incr_salesman;
+
+end;
+$$;
+
+
+--task
+CREATE TASK T_cust
+  WAREHOUSE = ETL_project
+  SCHEDULE = 'USING CRON 30 20 * * *  India/Mumbai'
+  TIMESTAMP_INPUT_FORMAT = 'YYYY-MM-DD HH24'
+as
+call spr_salesman()
+
+
+--external stage
+create or replace stage s3_stg_salesman
+URl='s3://etl-final/Extracted/salesman/salesman.csv'  
+storage_integration=s3_etl
+FILE_FORMAT=F_csv_etl;
+
+copy into incr_salesman from @s3_stg_salesman;
+
+
+--for pipe
+create or replace stage s3_stg_salesman
+URl='s3://etl-final/Extracted/salesman/INCR/'  
+storage_integration=s3_etl
+;
+
+
+list @s3_stg_salesman;
+
+
+CREATE OR REPLACE FILE FORMAT F_csv_etl
+TYPE = CSV ,
+SKIP_HEADER =1;
+
+
+Create OR REPLACE PIPE SP_salesman
+auto_ingest = true
+AS
+Copy into incr_salesman FROM @s3_stg_salesman
+file_format=(type=csv compression=none SKIP_HEADER =1)
+pattern='.*salesman.*[.]csv'
+on_error='continue';
+
+desc pipe SP_salesman;
+
+alter pipe SP_salesman refresh;
